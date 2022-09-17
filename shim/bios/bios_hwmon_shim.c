@@ -89,7 +89,7 @@ static const char *hwmon_hdd_bp_id_map[] = {
 };
 
 //todo: it's defined as __used as we know the structure but don't implement it yet
-static const __used char *hwmon_psu_id_map[] = {
+static const char *hwmon_psu_id_map[] = {
     [HWMON_PSU_NULL_ID] = "",
     [HWMON_PSU_PWR_IN_ID] = HWMON_PSU_SENSOR_PIN,
     [HWMON_PSU_PWR_OUT_ID] = HWMON_PSU_SENSOR_POUT,
@@ -295,6 +295,7 @@ static int bios_hwmon_get_hdd_backplane(SYNO_HWMON_SENSOR_TYPE *reading)
     return 0;
 }
 
+static int *hwmon_psu = NULL;
 /**
  * (Should) Return HWMON power supplies status
  *
@@ -303,10 +304,62 @@ static int bios_hwmon_get_hdd_backplane(SYNO_HWMON_SENSOR_TYPE *reading)
  * @param reading Pointer to save results
  * @return 0 on success, -E on error
  */
-static int bios_hwmon_get_psu_status(struct hw_config_hwmon *hwc, SYNO_HWMON_SENSOR_TYPE *reading)
+static int bios_hwmon_get_psu_status(SYNO_HWMON_SENSOR_TYPE *reading, int psu_num)
 {
-    pr_loc_wrn("mfgBIOS: **UNIMPLEMENTED** %s(type=%s)", __FUNCTION__, HWMON_PSU_STATUS_NAME);
-    return -EIO; //todo: we haven't [yet] seen a device using this
+    char psu[100];
+    sprintf(psu, HWMON_PSU_STATUS_NAME, psu_num);
+    printf(psu);
+    
+    guard_hwmon_cfg();
+    if (unlikely(!hwmon_psu))
+        kzalloc_or_exit_int(hwmon_psu, sizeof(int) * HWMON_PSU_SENSOR_IDS);
+
+    guarded_strscpy(reading->type_name, psu, sizeof(reading->type_name));
+    hwmon_pr_loc_dbg("mfgBIOS: => %s(type=%s)", __FUNCTION__, reading->type_name);
+
+    for (int i = 0; i < HWMON_PSU_SENSOR_IDS; i++) {
+        if (hwmon_cfg->sys_psu[i] == HWMON_PSU_NULL_ID)
+            break;
+
+        guarded_strscpy(reading->sensor[i].sensor_name, hwmon_psu_id_map[hwmon_cfg-> sys_psu[i]],
+                        sizeof(reading->sensor[i].sensor_name)); //Save the name of the sensor
+
+        if ( i == 0 ) {
+            hwmon_psu[i] = 300;
+        }
+        if ( i == 1 ) {
+            hwmon_psu[i] = 300;
+        }
+        if ( i == 2 ) {
+            hwmon_psu[i] = prandom_int_range_stable(&hwmon_psu[i], TEMP_DEV, FAKE_SURFACE_TEMP_MIN,
+                                                     FAKE_SURFACE_TEMP_MAX);
+        }
+        if ( i == 3 ) {
+            hwmon_psu[i] = prandom_int_range_stable(&hwmon_psu[i], TEMP_DEV, FAKE_SURFACE_TEMP_MIN,
+                                                     FAKE_SURFACE_TEMP_MAX);
+        }
+        if ( i == 4 ) {
+            hwmon_psu[i] = prandom_int_range_stable(&hwmon_psu[i], TEMP_DEV, FAKE_SURFACE_TEMP_MIN,
+                                                     FAKE_SURFACE_TEMP_MAX);
+        }
+        if ( i == 5 ) {
+            hwmon_psu[i] = prandom_int_range_stable(&hwmon_psu[i], FAN_SPEED_DEV, FAKE_RPM_MIN, FAKE_RPM_MAX);
+        }
+        if ( i == 6 ) {
+            hwmon_psu[i] = prandom_int_range_stable(&hwmon_psu[i], FAN_SPEED_DEV, FAKE_RPM_MIN, FAKE_RPM_MAX);
+        }
+        if ( i == 7 ) {
+            hwmon_psu[i] = 0;
+        }
+        
+        snprintf(reading->sensor[i].value, sizeof(reading->sensor[i].value), "%d", hwmon_psu[i]);
+        ++reading->sensor_num;
+
+        hwmon_pr_loc_dbg("mfgBIOS: <= %s() %s->%d", __FUNCTION__,
+                         hwmon_psu_id_map[hwmon_cfg-> sys_psu[i]], hwmon_psu[i]);
+    }
+
+    return 0;
 }
 
 /**
