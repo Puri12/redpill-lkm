@@ -306,58 +306,34 @@ static int *hwmon_psu = NULL;
  */
 static int bios_hwmon_get_psu_status(SYNO_HWMON_SENSOR_TYPE *reading, int psu_num)
 {
-    char psu[100];
-    sprintf(psu, HWMON_PSU_STATUS_NAME, psu_num);
-    printf(psu);
-    
     guard_hwmon_cfg();
     if (unlikely(!hwmon_psu))
-        kzalloc_or_exit_int(hwmon_psu, sizeof(int) * HWMON_PSU_SENSOR_IDS);
+        kzalloc_or_exit_int(hwmon_psu, sizeof(int) * HWMON_SYS_PSU_IDS);
 
-    guarded_strscpy(reading->type_name, psu, sizeof(reading->type_name));
+    guarded_strscpy(reading->type_name, HWMON_SYS_PSU_STATUS_NAME, sizeof(reading->type_name));
     hwmon_pr_loc_dbg("mfgBIOS: => %s(type=%s)", __FUNCTION__, reading->type_name);
 
-    for (int i = 0; i < HWMON_PSU_SENSOR_IDS; i++) {
-        if (hwmon_cfg->sys_psu[i] == HWMON_PSU_NULL_ID)
-            break;
 
-        guarded_strscpy(reading->sensor[i].sensor_name, hwmon_psu_id_map[hwmon_cfg-> sys_psu[i]],
-                        sizeof(reading->sensor[i].sensor_name)); //Save the name of the sensor
+    //todo: this should be taken from the power supply driver
+    hwmon_psu[0] = prandom_int_range_stable(&hwmon_psu[0], PSU_STATUS_DEV, FAKE_PSU_MIN, FAKE_PSU_MAX);
+    hwmon_psu[1] = prandom_int_range_stable(&hwmon_psu[1], PSU_STATUS_DEV, FAKE_PSU_MIN, FAKE_PSU_MAX);
 
-        if ( i == 0 ) {
-            hwmon_psu[i] = 300;
-        }
-        if ( i == 1 ) {
-            hwmon_psu[i] = 300;
-        }
-        if ( i == 2 ) {
-            hwmon_psu[i] = prandom_int_range_stable(&hwmon_psu[i], TEMP_DEV, FAKE_SURFACE_TEMP_MIN,
-                                                     FAKE_SURFACE_TEMP_MAX);
-        }
-        if ( i == 3 ) {
-            hwmon_psu[i] = prandom_int_range_stable(&hwmon_psu[i], TEMP_DEV, FAKE_SURFACE_TEMP_MIN,
-                                                     FAKE_SURFACE_TEMP_MAX);
-        }
-        if ( i == 4 ) {
-            hwmon_psu[i] = prandom_int_range_stable(&hwmon_psu[i], TEMP_DEV, FAKE_SURFACE_TEMP_MIN,
-                                                     FAKE_SURFACE_TEMP_MAX);
-        }
-        if ( i == 5 ) {
-            hwmon_psu[i] = prandom_int_range_stable(&hwmon_psu[i], FAN_SPEED_DEV, FAKE_RPM_MIN, FAKE_RPM_MAX);
-        }
-        if ( i == 6 ) {
-            hwmon_psu[i] = prandom_int_range_stable(&hwmon_psu[i], FAN_SPEED_DEV, FAKE_RPM_MIN, FAKE_RPM_MAX);
-        }
-        if ( i == 7 ) {
-            hwmon_psu[i] = 0;
-        }
-        
-        snprintf(reading->sensor[i].value, sizeof(reading->sensor[i].value), "%d", hwmon_psu[i]);
-        ++reading->sensor_num;
+    //todo: this should be taken from the power supply driver
+    guarded_strscpy(reading->sensor[0].sensor_name, hwmon_sys_psu_id_map[hwmon_cfg->sys_psu_status[0]],
+                    sizeof(reading->sensor[0].sensor_name)); //Save the name of the sensor
+    snprintf(reading->sensor[0].value, sizeof(reading->sensor[0].value), "%d", hwmon_psu[0]);
+    ++reading->sensor_num;
+    //todo: this should be taken from the power supply driver
+    guarded_strscpy(reading->sensor[1].sensor_name, hwmon_sys_psu_id_map[hwmon_cfg->sys_psu_status[1]],
+                    sizeof(reading->sensor[1].sensor_name)); //Save the name of the sensor
+    snprintf(reading->sensor[1].value, sizeof(reading->sensor[1].value), "%d", hwmon_psu[1]);
+    ++reading->sensor_num;
 
-        hwmon_pr_loc_dbg("mfgBIOS: <= %s() %s->%d", __FUNCTION__,
-                         hwmon_psu_id_map[hwmon_cfg-> sys_psu[i]], hwmon_psu[i]);
-    }
+    hwmon_pr_loc_dbg("mfgBIOS: <= %s() %s->%d", __FUNCTION__, hwmon_sys_psu_id_map[hwmon_cfg->sys_psu_status[0]],
+                     hwmon_psu[0]);
+
+    hwmon_pr_loc_dbg("mfgBIOS: <= %s() %s->%d", __FUNCTION__, hwmon_sys_psu_id_map[hwmon_cfg->sys_psu_status[1]],
+                        hwmon_psu[1]);
 
     return 0;
 }
